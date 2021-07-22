@@ -30,11 +30,13 @@ In last year(2020 Dec) i was learning about Nifty option Segment. Nifty Option s
 You should have installed node and npm in your machine.
 
 ## How to run this project:
-After cloning his project in your local workspace. Go inside of option_chain_analysis folder abd run below command:
+After cloning his project in your local workspace. Go inside of option_chain_analysis folder and run below command:
+ 
  npm install
 
 and run below command also:
-npm start
+
+ npm start
 
 now go to your browser and paste the below given URL:
 http://localhost:3000
