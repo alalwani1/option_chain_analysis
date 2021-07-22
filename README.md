@@ -3,7 +3,7 @@
 # Motivation behind this Project
 In last year(2020 Dec) i was learning about Nifty option Segment. Nifty Option segment can be understand by option chain data and in the beginning i got to know that anyone can fetch data from NSEIndia website(https://www.nseindia.com) as they provides Rest APIs for the same without ny cost and during this time i thougth to create a Node.js project on this. This project was developed for education purpose only, it has no commercial use. I have learned about option chain data from Sameer Dharasker Sir.
 
-#Features
+## Features
  
  a) Expiry Date Selection
     UI will give you Expiry Date selection through which you can access data based upon selected expiry date.
@@ -26,10 +26,10 @@ In last year(2020 Dec) i was learning about Nifty option Segment. Nifty Option s
 ## Page Screenshot
 <img width="1082" alt="Screenshot 2021-07-22 at 4 33 18 PM" src="https://user-images.githubusercontent.com/87809858/126629499-4e383e3c-c792-46bf-90e7-97b009a0a942.png">
 
-Required Setup:
+## Required Setup:
 You should have installed node and npm in your machine.
 
-#How to run this project:
+## How to run this project:
 After cloning his project in your local workspace. Go inside of option_chain_analysis folder abd run below command:
  npm install
 
