@@ -1,0 +1,261 @@
+<html>
+
+<head>
+  <title>Option Chain Analysis</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"
+    crossorigin="anonymous" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.1.2/handlebars.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.js"></script>
+  <style>
+    .container-fluid{
+      width:100%;
+    }
+    .table1{  
+      float:left;
+      width:35%; 
+      height:auto; 
+    }
+    .table2{  
+      height:auto; 
+    }
+  </style>
+</head>
+
+<body onload="init()">
+  <div class="container-fluid">
+    <h1>Option Chain</h1>
+    <form class="inline-form">
+      <fieldset>
+        <div class="form-group-inline">
+          <label for="expiryDate" class="form-label">Expiry Date</label>
+          <select onchange="generateTbl()" name="expiryDate" id="expiryDate"></select>
+          &nbsp;&nbsp;<span id="lastUpdated"></span>
+        </div>
+      </fieldset>
+    </form>
+    <div class="table1">Loading...</div>
+    <div class="table2">Loading...</div>
+  </div>
+
+
+  <script id="chain1" type="text/x-handlebars-template" >
+    <table class="table table-bordered table-striped" style="width: 300px;height: auto;">
+      <thead>
+        <tr>
+          <th>Call change in OI</th>
+          <th>Strike Price</th>
+          <th>Put Change in OI</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each option_chain}}
+        <tr>
+          <td class="text-center">{{ CE.changeinOpenInterest }}</td>
+          <th class="text-center">{{ strikePrice }}</th>
+          <td class="text-left">{{ PE.changeinOpenInterest }}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </script>
+
+  <script id="chain2" type="text/x-handlebars-template">
+    <table class="table table-bordered table-striped" style="width: 400px;height: auto;">
+      <thead>
+        <tr>
+          <th class="text-center">Time</th>
+          <th class="text-center">Call writers</th>
+          <th class="text-center">Put writers</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each this}}
+        <tr>
+          <td class="text-right">{{ time }}</td>
+          <td class="text-center">{{ call }}</td>
+          <td class="text-left">{{ put }}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </script>
+  
+  <script>
+    var optionChainData, lastUpdated, underlyingValue, selected_expiry, option_chain = [];
+
+    // this function can be used to 
+    function getData(cb) {
+      return new Promise((resolve, reject) => {
+        console.log(optionChainData);
+        /*if (optionChainData !=undefined ) {
+          console.log('test1');
+          resolve(optionChainData);
+        } else {*/
+          console.log('test2');
+          fetch('/chain')
+            .then(resp => {
+              console.log('test3');
+              if (resp.status != 200) throw new Error('something went wrong');
+              return resp.json();
+            })
+            .then(data => {
+              console.log('test4');
+              localStorage.setItem('option_chain', JSON.stringify(data));
+              optionChainData = data;
+              lastUpdated = optionChainData.records.timestamp;
+              document.querySelector('#lastUpdated').innerHTML = 'Last Updated: ' + lastUpdated;
+              resolve(optionChainData);
+            })
+            .catch(err => {
+              console.log('test5');
+              optionChainData = JSON.parse(localStorage.getItem('option_chain'));;
+              if (optionChainData == null)
+              {
+                console.log('test6');
+                document.getElementById('content1').innerHTML = "Error Occured: " + err.toString();
+                reject('error');
+              }
+              lastUpdated = optionChainData.records.timestamp;
+              document.querySelector('#lastUpdated').innerHTML = 'Last Updated: ' + lastUpdated;
+              resolve(optionChainData);
+            })
+        //}
+      });
+    }
+
+    function init() {
+      getData().then(function (data) {
+        console.log(data);
+        expiryDates = data.records.expiryDates;
+        underlyingValue = data.records.underlyingValue;
+        selected_expiry = data.records.expiryDates[0];
+        fillExpiryDate(expiryDates);
+        document.querySelector('#expiryDate').value = selected_expiry;
+        generateTbl();
+      })
+    }
+
+
+    //this function set the initial price for NIFTY to calculate range of optionData to display in table1
+    function setInitalPrice(openPrice) {
+        let tempPrice = openPrice;
+        tempPrice = parseInt(tempPrice/100)*100;
+        let diff = openPrice-tempPrice;
+        if(diff<50) {
+          openPrice = tempPrice;
+        }
+        else {
+          openPrice = tempPrice+100;
+        }
+        console.log(openPrice);
+        return openPrice;
+    }
+
+    //this function render the optionData each time 
+    function generateTbl() {
+      let expiryDate = document.querySelector('#expiryDate').value;
+      console.log(optionChainData.records.underlyingValue);
+      let openPrice=setInitalPrice(parseInt(optionChainData.records.underlyingValue));
+      let call_oi_change=0;
+      let put_oi_change=0;
+      let option_chain = optionChainData.records.data.filter(c => {
+        return (
+            c.strikePrice <= 400 + (parseInt(underlyingValue / 100) * 100)) &&
+          (c.strikePrice >= (parseInt(underlyingValue / 100) * 100) - 400) &&
+          c.expiryDate == expiryDate
+      });
+
+      option_chain.forEach(function (record) {
+          record.CE.changeinOpenInterest = record.CE.changeinOpenInterest*75;
+          record.PE.changeinOpenInterest = record.PE.changeinOpenInterest*75;
+      });
+
+      //calculation should be based upon current week
+      let option_chain_for_analysis = option_chain.filter(c => {
+        return (
+          c.strikePrice == openPrice || (c.strikePrice == openPrice+50) || (c.strikePrice == openPrice+100) && c.expiryDate == expiryDate
+      )});
+      
+      let recordedTime = moment(optionChainData.records.timestamp).format('h:mm:ss a');
+
+      if(recordedTime != localStorage.getItem('lastupdated_time'))
+      {
+        localStorage.setItem('lastupdated_time', recordedTime);
+        option_chain_for_analysis.forEach(function (record) {
+          call_oi_change += record.CE.changeinOpenInterest;
+          put_oi_change += record.PE.changeinOpenInterest;
+        });
+
+        call_oi_change = call_oi_change.toLocaleString('en-IN', {useGrouping:true});
+        put_oi_change = put_oi_change.toLocaleString('en-IN', {useGrouping:true});
+
+        let call_put_change_in_oi_data = {
+          time: recordedTime,
+          call: call_oi_change,
+          put: put_oi_change
+        };
+        
+        SaveDataToLocalStorage(call_put_change_in_oi_data);
+
+      }
+
+      option_chain = formatExpiryData(option_chain);
+
+      let context = {
+        option_chain,
+        lastUpdated,
+        underlyingValue,
+        selected_expiry
+      };
+      renderTbl(context);
+    }
+
+    //this function stores our fetched data into browser's localStorage
+    function SaveDataToLocalStorage(data)
+    {
+        var localStorageData = [];
+        // Parse the serialized data back into an aray of objects
+        localStorageData = JSON.parse(localStorage.getItem('data')) || [];
+        // Push the new data (whether it be an object or anything else) onto the array
+        localStorageData.push(data);
+        // Re-serialize the array back into a string and store it in localStorage
+        localStorage.setItem('data', JSON.stringify(localStorageData));
+    }
+
+    // this function represent expiry in indian number count format.
+    function formatExpiryData(option_chain){
+      option_chain.forEach(function (record) {
+          record.CE.changeinOpenInterest = record.CE.changeinOpenInterest.toLocaleString('en-IN', {useGrouping:true});
+          record.PE.changeinOpenInterest = record.PE.changeinOpenInterest.toLocaleString('en-IN', {useGrouping:true});
+        });
+      return option_chain;
+    }
+
+    //this function can be used to fill expiry date drop down list with current list of expiry dates.
+    function fillExpiryDate(expiryDates) {
+      let expirySelect = document.querySelector('#expiryDate');
+      expirySelect.innerHTML = expiryDates.map((c, idx) => {
+        return `<option value="${c}">${c}</option>`;
+      });
+    }
+
+    // this function updates the tables everytime with new data
+    function renderTbl(context) {
+      var source = document.getElementById("chain1").innerHTML;
+      var template = Handlebars.compile(source);
+      var category=document.getElementsByClassName('container-fluid');
+      document.getElementsByClassName('table1')[0].innerHTML = template(context);
+
+      source = document.getElementById("chain2").innerHTML;
+      template = Handlebars.compile(source);
+      context= JSON.parse(localStorage.getItem('data'));
+      context = context.length>20?(context.slice((context.length - 10), context.length)):context;
+      document.getElementsByClassName('table2')[0].innerHTML = template(context);
+    }
+
+    //update table after every 2 minutes
+    setInterval(init, 200000);
+
+  </script>
+</body>
+</html>
